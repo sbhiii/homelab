@@ -5,9 +5,9 @@ data "hcloud_ssh_key" "samy-ssh" {
 # Network
 
 locals {
-  network_name = lower("${var.project_code}-${var.environment}-vpc")
+  network_name       = lower("${var.project_code}-${var.environment}-vpc")
   server_name_prefix = lower("${var.project_code}-${var.environment}-server")
-  
+
   # common labels for governance (FinOps / Ops)
   common_labels = {
     Environment = var.environment
@@ -20,7 +20,7 @@ locals {
 resource "hcloud_network" "private-network" {
   name     = local.network_name
   ip_range = var.vpc_cidr
-  labels = local.common_labels
+  labels   = local.common_labels
 }
 
 resource "hcloud_network_subnet" "network-subnet" {
@@ -32,7 +32,7 @@ resource "hcloud_network_subnet" "network-subnet" {
 
 resource "hcloud_firewall" "homelab_fw" {
   name = "${local.network_name}-fw"
-  
+
   # HTTP (Port 80)
   rule {
     direction  = "in"
@@ -48,7 +48,7 @@ resource "hcloud_firewall" "homelab_fw" {
     port       = "443"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
-  
+
   # UDP Gaming / WireGuard (Optional)
   # rule {
   #   direction  = "in"
@@ -67,9 +67,9 @@ resource "hcloud_firewall" "homelab_fw" {
 
   # Kubernetes API (Port 6443)
   rule {
-    direction  = "in"
-    protocol   = "tcp"
-    port       = "6443"
+    direction = "in"
+    protocol  = "tcp"
+    port      = "6443"
     source_ips = concat(
       [var.vpc_cidr],
       var.allowed_mgmt_ips
@@ -92,25 +92,24 @@ resource "hcloud_firewall" "homelab_fw" {
 
 resource "hcloud_server" "nodes" {
   for_each = var.nodes
-  name        = "${local.server_name_prefix}-${each.key}"
-  
+  name     = "${local.server_name_prefix}-${each.key}"
+
   server_type = each.value.server_type
   image       = "debian-12"
   location    = "nbg1"
-  ssh_keys = [data.hcloud_ssh_key.samy-ssh.id]
+  ssh_keys    = [data.hcloud_ssh_key.samy-ssh.id]
 
   network {
     network_id = hcloud_network.private-network.id
     ip         = each.value.ip
   }
-  
+
   public_net {
     ipv4_enabled = true
     ipv6_enabled = true
   }
 
-  # PLACEHOLDER
-  # user_data = file("${path.module}/scripts/install_k3s.sh")
+  user_data = file("${path.module}/scripts/install_k3s.sh")
 
   labels = merge(
     local.common_labels,
