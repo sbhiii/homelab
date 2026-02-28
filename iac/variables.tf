@@ -39,7 +39,7 @@ variable "server_private_ip" {
   description = "Static private IP address for the server hosting k3s (must be in the same IP range as the network)."
   type        = string
   validation {
-    condition = can(cidrnetmask("${var.server_private_ip}/32")) 
+    condition     = can(cidrnetmask("${var.server_private_ip}/32"))
     error_message = "server_private_ip must be a valid IPv4."
   }
 }
@@ -64,4 +64,23 @@ variable "nodes" {
     ip          = string
     labels      = optional(map(string), {}) # Pour tagger spécifiquement un noeud
   }))
+}
+
+# k3s Cluster configuration
+
+variable "github_user" {
+  description = "GitHub username for repo homelab-gitops"
+  type        = string
+}
+
+variable "github_pat" {
+  description = "GitHub Personal Access Token (scope: repo)"
+  type        = string
+  sensitive   = true
+}
+
+variable "gitops_repo_url" {
+  description = "URL HTTPS du repo gitops"
+  type        = string
+  default     = "https://github.com/SamyBahi/homelab-gitops.git"
 }

@@ -3,7 +3,7 @@
 apt-get update
 apt-get install -y curl fuse3 open-iscsi nfs-common
 
-# 2. Optimisation Kernel pour Plex
+# 2. Optimisation Kernel pour Jellyfin
 echo "fs.inotify.max_user_instances=524288" >> /etc/sysctl.d/99-kubernetes.conf
 echo "fs.inotify.max_user_watches=524288" >> /etc/sysctl.d/99-kubernetes.conf
 sysctl -p /etc/sysctl.d/99-kubernetes.conf
