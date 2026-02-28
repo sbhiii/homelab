@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/SamyBahi/homelab-gitops.git
     targetRevision: HEAD
-    path: bootstrap # Chemin vers ton Helm Chart de bootstrap
+    path: bootstrap
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
