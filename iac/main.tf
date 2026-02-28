@@ -109,17 +109,17 @@ resource "hcloud_server" "nodes" {
     ipv6_enabled = true
   }
 
-  user_data = templatefile("${path.module}/scripts/init_cluster.sh.tftpl", {
-    argocd_manifest = templatefile("${path.module}/manifests/argocd.yaml", {})
-    argocd_repo_secret = templatefile("${path.module}/manifests/argocd-repo-secret.yaml.tftpl", {
-      git_repo_url = var.github_repo_url
-      git_token    = var.github_token
-    })
-    argocd_root_app = templatefile("${path.module}/manifests/argocd-root-app.yaml", {})
-    rd_secret_manifest = templatefile("${path.module}/manifests/realdebrid-secret.yaml.tftpl", {
-      rd_api_key = var.realdebrid_api_key
-    })
-  })
+  # user_data = templatefile("${path.module}/scripts/init_cluster.sh.tftpl", {
+  #   argocd_manifest = templatefile("${path.module}/manifests/argocd.yaml", {})
+  #   argocd_repo_secret = templatefile("${path.module}/manifests/argocd-repo-secret.yaml.tftpl", {
+  #     git_repo_url = var.github_repo_url
+  #     git_token    = var.github_token
+  #   })
+  #   argocd_root_app = templatefile("${path.module}/manifests/argocd-root-app.yaml", {})
+  #   rd_secret_manifest = templatefile("${path.module}/manifests/realdebrid-secret.yaml.tftpl", {
+  #     rd_api_key = var.realdebrid_api_key
+  #   })
+  #  })
 
   labels = merge(
     local.common_labels,
