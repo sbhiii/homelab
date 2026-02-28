@@ -78,3 +78,9 @@ variable "github_repo_url" {
   type        = string
   default     = "https://github.com/SamyBahi/homelab-gitops.git"
 }
+
+variable "realdebrid_api_key" {
+  description = "API Token pour RealDebrid"
+  type        = string
+  sensitive   = true
+}
