@@ -23,4 +23,8 @@ EOF
 
 # 4. Installation K3s
 PUBLIC_IP=$(curl -s http://169.254.169.254/hetzner/v1/metadata/public-ipv4)
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --tls-san $PUBLIC_IP --write-kubeconfig-mode 644" sh -s -
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
+  --tls-san $PUBLIC_IP \
+  --write-kubeconfig-mode 644 \
+  --disable traefik \
+  --disable servicelb" sh -s -

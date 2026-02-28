@@ -112,7 +112,7 @@ resource "hcloud_server" "nodes" {
   user_data = templatefile("${path.module}/scripts/init_cluster.sh.tftpl", {
     argocd_manifest = templatefile("${path.module}/manifests/argocd.yaml", {})
     argocd_repo_secret = templatefile("${path.module}/manifests/argocd-repo-secret.yaml.tftpl", {
-      git_repo_url = "https://github.com/SamyBahi/homelab-gitops.git"
+      git_repo_url = var.github_repo_url
       git_token    = var.github_token
     })
     argocd_root_app = templatefile("${path.module}/manifests/argocd-root-app.yaml", {})
