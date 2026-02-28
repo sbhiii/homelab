@@ -8,7 +8,12 @@ sysctl -p /etc/sysctl.d/99-kubernetes.conf
 # K3s applique tout ce qui se trouve ici par ordre alphabétique
 mkdir -p /var/lib/rancher/k3s/server/manifests/
 
-# 3. Injection des manifests via Terraform
+# 3. Injection du Secret RealDebrid
+cat <<EOF > /var/lib/rancher/k3s/server/manifests/00-media-secret.yaml
+${rd_secret_manifest}
+EOF
+
+# 4. Injection des manifests via Terraform
 cat <<EOF > /var/lib/rancher/k3s/server/manifests/01-argocd-helm.yaml
 ${argocd_manifest}
 EOF

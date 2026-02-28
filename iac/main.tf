@@ -116,6 +116,9 @@ resource "hcloud_server" "nodes" {
       git_token    = var.github_token
     })
     argocd_root_app = templatefile("${path.module}/manifests/argocd-root-app.yaml", {})
+    rd_secret_manifest = templatefile("${path.module}/manifests/realdebrid-secret.yaml.tftpl", {
+      rd_api_key = var.realdebrid_api_key
+    })
   })
 
   labels = merge(
