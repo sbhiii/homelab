@@ -39,7 +39,7 @@ variable "server_private_ip" {
   description = "Static private IP address for the server hosting k3s (must be in the same IP range as the network)."
   type        = string
   validation {
-    condition = can(cidrnetmask("${var.server_private_ip}/32")) 
+    condition     = can(cidrnetmask("${var.server_private_ip}/32"))
     error_message = "server_private_ip must be a valid IPv4."
   }
 }
