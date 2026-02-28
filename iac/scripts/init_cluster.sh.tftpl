@@ -9,7 +9,7 @@ sysctl -p /etc/sysctl.d/99-kubernetes.conf
 mkdir -p /var/lib/rancher/k3s/server/manifests/
 
 # 3. Injection du Secret RealDebrid
-cat <<EOF > /var/lib/rancher/k3s/server/manifests/00-media-secret.yaml
+cat <<EOF > /var/lib/rancher/k3s/server/manifests/00-streaming-secret.yaml
 ${rd_secret_manifest}
 EOF
 
