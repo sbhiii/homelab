@@ -67,19 +67,13 @@ variable "nodes" {
 }
 
 # k3s Cluster configuration
-
-variable "github_user" {
-  description = "GitHub username for repo homelab-gitops"
-  type        = string
-}
-
 variable "github_token" {
   description = "GitHub Personal Access Token (scope: repo)"
   type        = string
   sensitive   = true
 }
 
-variable "gitops_repo_url" {
+variable "github_repo_url" {
   description = "URL HTTPS du repo gitops"
   type        = string
   default     = "https://github.com/SamyBahi/homelab-gitops.git"
