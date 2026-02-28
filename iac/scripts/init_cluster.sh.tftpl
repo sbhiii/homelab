@@ -1,39 +1,26 @@
 #!/bin/bash
-# 1. Mise à jour et dépendances système
-apt-get update
-apt-get install -y curl fuse3 open-iscsi nfs-common
-
-# 2. Optimisation Kernel pour Jellyfin
+# 1. Dépendances et optimisations (Inotify pour Jellyfin est crucial, bien vu)
+apt-get update && apt-get install -y curl fuse3 open-iscsi nfs-common
 echo "fs.inotify.max_user_instances=524288" >> /etc/sysctl.d/99-kubernetes.conf
-echo "fs.inotify.max_user_watches=524288" >> /etc/sysctl.d/99-kubernetes.conf
 sysctl -p /etc/sysctl.d/99-kubernetes.conf
 
-# 3. Préparation du dossier d'auto-déploiement K3s
+# 2. Préparation du dossier d'auto-déploiement
+# K3s applique tout ce qui se trouve ici par ordre alphabétique
 mkdir -p /var/lib/rancher/k3s/server/manifests/
 
-# 4. Injection du HelmChart ArgoCD (Sera lu par K3s au démarrage)
-cat <<EOF > /var/lib/rancher/k3s/server/manifests/argocd.yaml
-apiVersion: helm.cattle.io/v1
-kind: HelmChart
-metadata:
-  name: argocd
-  namespace: kube-system
-spec:
-  chart: argo-cd
-  repo: https://argoproj.github.io/argo-helm
-  targetNamespace: argocd
-  createNamespace: true
-  valuesContent: |-
-    server:
-      extraArgs:
-        - --insecure
-    configs:
-      params:
-        server.insecure: true
+# 3. Injection des manifests via Terraform
+cat <<EOF > /var/lib/rancher/k3s/server/manifests/01-argocd-helm.yaml
+${argocd_manifest}
 EOF
 
-# 5. Récupération de l'IP publique
-PUBLIC_IP=$(curl -s http://169.254.169.254/hetzner/v1/metadata/public-ipv4)
+cat <<EOF > /var/lib/rancher/k3s/server/manifests/02-argocd-repo-secret.yaml
+${argocd_repo_secret}
+EOF
 
-# 6. Installation de K3s (Déclenche le démarrage et l'installation d'ArgoCD)
+cat <<EOF > /var/lib/rancher/k3s/server/manifests/03-argocd-root-app.yaml
+${argocd_root_app}
+EOF
+
+# 4. Installation K3s
+PUBLIC_IP=$(curl -s http://169.254.169.254/hetzner/v1/metadata/public-ipv4)
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --tls-san $PUBLIC_IP --write-kubeconfig-mode 644" sh -s -
