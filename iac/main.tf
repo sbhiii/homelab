@@ -109,7 +109,14 @@ resource "hcloud_server" "nodes" {
     ipv6_enabled = true
   }
 
-  user_data = file("${path.module}/scripts/install_k3s.sh")
+  user_data = templatefile("${path.module}/scripts/init_cluster.sh.tftpl", {
+    argocd_manifest = templatefile("${path.module}/manifests/argocd.yaml", {})
+    argocd_repo_secret = templatefile("${path.module}/manifests/argocd-repo-secret.yaml.tftpl", {
+      git_repo_url = "https://github.com/SamyBahi/homelab-gitops.git"
+      git_token    = var.github_token
+    })
+    argocd_root_app = templatefile("${path.module}/manifests/argocd-root-app.yaml", {})
+  })
 
   labels = merge(
     local.common_labels,

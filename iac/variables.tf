@@ -73,7 +73,7 @@ variable "github_user" {
   type        = string
 }
 
-variable "github_pat" {
+variable "github_token" {
   description = "GitHub Personal Access Token (scope: repo)"
   type        = string
   sensitive   = true
