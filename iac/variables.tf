@@ -65,3 +65,22 @@ variable "nodes" {
     labels      = optional(map(string), {}) # Pour tagger spécifiquement un noeud
   }))
 }
+
+# k3s Cluster configuration
+variable "github_token" {
+  description = "GitHub Personal Access Token (scope: repo)"
+  type        = string
+  sensitive   = true
+}
+
+variable "github_repo_url" {
+  description = "URL HTTPS du repo gitops"
+  type        = string
+  default     = "https://github.com/SamyBahi/homelab-gitops.git"
+}
+
+# variable "realdebrid_api_key" {
+#   description = "API Token pour RealDebrid"
+#   type        = string
+#   sensitive   = true
+# }
