@@ -100,12 +100,12 @@ resource "hcloud_server" "nodes" {
   ssh_keys    = [data.hcloud_ssh_key.samy-ssh.id]
 
   user_data = templatefile("${path.module}/scripts/init-cluster.sh.tftpl", {
-    argocd_manifest = templatefile("${path.module}/manifests/argocd.yaml", {})
-    argocd_repo_secret = templatefile("${path.module}/manifests/argocd-repo-secret.yaml.tftpl", {
+    argocd_manifest = templatefile("${path.module}/manifests/argocd.yml", {})
+    argocd_repo_secret = templatefile("${path.module}/manifests/argocd-repo-secret.yml.tftpl", {
       git_repo_url = var.github_repo_url
       git_token    = var.github_token
     })
-    argocd_root_app = templatefile("${path.module}/manifests/argocd-root-app.yaml.tftpl", {
+    argocd_root_app = templatefile("${path.module}/manifests/argocd-root-app.yml.tftpl", {
       git_repo_url = var.github_repo_url
     })
   })
