@@ -46,3 +46,9 @@ data "terraform_remote_state" "hetzner" {
     region = var.region
   }
 }
+
+variable "ingress_node_id" {
+  description = "Clé du noeud, dans la map nodes de la stack hetzner, portant l'Ingress."
+  type        = string
+  default     = "01"
+}
