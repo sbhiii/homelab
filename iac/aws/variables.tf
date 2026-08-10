@@ -37,3 +37,12 @@ locals {
   issuer_host = "${var.oidc_subdomain}.${var.dns_zone_name}"
   issuer_url  = "https://${local.issuer_host}"
 }
+
+data "terraform_remote_state" "hetzner" {
+  backend = "s3"
+  config = {
+    bucket = var.state_bucket_name
+    key    = "hetzner/terraform.tfstate"
+    region = var.region
+  }
+}
