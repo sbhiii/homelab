@@ -22,3 +22,8 @@ output "discovery_distribution_domain" {
   description = "CloudFront domain fronting the discovery bucket."
   value       = aws_cloudfront_distribution.oidc.domain_name
 }
+
+output "cert_manager_role_arn" {
+  description = "Role the cert-manager ServiceAccount assumes."
+  value       = aws_iam_role.cert_manager.arn
+}
