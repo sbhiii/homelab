@@ -27,3 +27,8 @@ output "cert_manager_role_arn" {
   description = "Role the cert-manager ServiceAccount assumes."
   value       = aws_iam_role.cert_manager.arn
 }
+
+output "apps_wildcard_target" {
+  description = "IP vers laquelle *.srehomelab.sbhi.io résout."
+  value       = local.node_public_ip
+}
