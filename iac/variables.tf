@@ -76,7 +76,7 @@ variable "github_token" {
 variable "github_repo_url" {
   description = "URL HTTPS du repo gitops"
   type        = string
-  default     = "https://github.com/SamyBahi/homelab-gitops.git"
+  default     = "https://github.com/sbhiii/sre-homelab-gitops.git"
 }
 
 # variable "realdebrid_api_key" {
