@@ -84,3 +84,14 @@ variable "github_repo_url" {
 #   type        = string
 #   sensitive   = true
 # }
+
+variable "oidc_issuer_url" {
+  description = "URL publique servant les documents de découverte OIDC du cluster."
+  type        = string
+  default     = "https://oidc.srehomelab.sbhi.io"
+
+  validation {
+    condition     = startswith(var.oidc_issuer_url, "https://")
+    error_message = "L'issuer doit être en HTTPS : AWS refuse tout autre schéma."
+  }
+}

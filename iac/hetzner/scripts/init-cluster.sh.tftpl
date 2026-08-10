@@ -22,10 +22,26 @@ cat <<EOF > /var/lib/rancher/k3s/server/manifests/03-argocd-root-app.yaml
 ${argocd_root_app}
 EOF
 
+# 3b. Clé de signature des tokens ServiceAccount (fournie par Terraform)
+mkdir -p /etc/k3s-oidc
+cat <<'EOF' > /etc/k3s-oidc/sa.key
+${sa_private_key}
+EOF
+cat <<'EOF' > /etc/k3s-oidc/sa.pub
+${sa_public_key}
+EOF
+chmod 600 /etc/k3s-oidc/sa.key
+chmod 644 /etc/k3s-oidc/sa.pub
+chown root:root /etc/k3s-oidc/sa.key /etc/k3s-oidc/sa.pub
+
 # 4. Installation K3s
 PUBLIC_IP=$(curl -s http://169.254.169.254/hetzner/v1/metadata/public-ipv4)
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
   --tls-san $PUBLIC_IP \
   --write-kubeconfig-mode 644 \
   --disable traefik \
-  --disable servicelb" sh -s -
+  --disable servicelb \
+  --kube-apiserver-arg=service-account-issuer=${oidc_issuer_url} \
+  --kube-apiserver-arg=service-account-signing-key-file=/etc/k3s-oidc/sa.key \
+  --kube-apiserver-arg=service-account-key-file=/etc/k3s-oidc/sa.pub \
+  --kube-apiserver-arg=api-audiences=${oidc_issuer_url},sts.amazonaws.com" sh -s -
