@@ -11,3 +11,13 @@ output "nodes_private_ips" {
     for k, v in hcloud_server.nodes : k => v.network[*].ip
   }
 }
+
+output "sa_public_key_pem" {
+  description = "Clé publique de signature, consommée par la stack AWS pour le JWKS."
+  value       = tls_private_key.sa_signing.public_key_pem
+}
+
+output "oidc_issuer_url" {
+  description = "Issuer configuré sur l'API server."
+  value       = var.oidc_issuer_url
+}

@@ -2,3 +2,6 @@
 .terraform
 .terraform.lock.hcl
 *.tfstate*
+__pycache__/
+k3s-config.yaml
+k3s.yaml

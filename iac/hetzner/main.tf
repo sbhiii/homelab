@@ -108,6 +108,9 @@ resource "hcloud_server" "nodes" {
     argocd_root_app = templatefile("${path.module}/manifests/argocd-root-app.yml.tftpl", {
       git_repo_url = var.github_repo_url
     })
+    oidc_issuer_url = var.oidc_issuer_url
+    sa_private_key  = tls_private_key.sa_signing.private_key_pem
+    sa_public_key   = tls_private_key.sa_signing.public_key_pem
   })
 
   network {
