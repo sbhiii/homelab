@@ -6,7 +6,7 @@ echo "fs.inotify.max_user_instances=524288" >> /etc/sysctl.d/99-kubernetes.conf
 sysctl -p /etc/sysctl.d/99-kubernetes.conf
 
 # 2. preparing k3s folder
-# K3s applique tout ce qui se trouve ici par ordre alphabétique
+# K3s applies everything placed here, in alphabetical order
 mkdir -p /var/lib/rancher/k3s/server/manifests/
 
 # 3. injection of argocd manifests through terraform
@@ -22,7 +22,7 @@ cat <<EOF > /var/lib/rancher/k3s/server/manifests/03-argocd-root-app.yaml
 ${argocd_root_app}
 EOF
 
-# 3b. Clé de signature des tokens ServiceAccount (fournie par Terraform)
+# 3b. ServiceAccount token-signing key (supplied by Terraform)
 mkdir -p /etc/k3s-oidc
 cat <<'EOF' > /etc/k3s-oidc/sa.key
 ${sa_private_key}
@@ -46,31 +46,30 @@ curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
   --kube-apiserver-arg=service-account-key-file=/etc/k3s-oidc/sa.pub \
   --kube-apiserver-arg=api-audiences=${oidc_issuer_url},sts.amazonaws.com" sh -s -
 
-# 5. Interdire aux pods d'atteindre le service de métadonnées
+# 5. Deny pods access to the metadata service
 #
-# Hetzner sert le user_data sans authentification sur 169.254.169.254, et ce
-# user_data contient la clé de signature des tokens ServiceAccount ainsi que le
-# PAT GitHub. Sans cette règle, n'importe quel pod peut les lire, forger un
-# token pour n'importe quel ServiceAccount et pousser sur le dépôt gitops.
+# Hetzner serves user_data unauthenticated on 169.254.169.254, and that user_data
+# carries both the ServiceAccount token-signing key and the GitHub PAT. Without
+# this rule any pod can read them, forge a token for any ServiceAccount, and push
+# to the gitops repository.
 #
-# La chaîne FORWARD ne voit que le trafic *traversant* le noeud, donc les
-# paquets des pods. Le noeud lui-même passe par OUTPUT et garde son accès (il
-# en a besoin ci-dessus pour récupérer son IP publique). Les DaemonSets
-# d'infrastructure en hostNetwork (CSI, CCM) passent aussi par OUTPUT et ne
-# sont donc pas affectés.
+# The FORWARD chain only sees traffic *transiting* the node, which is precisely
+# pod traffic. The node itself goes through OUTPUT and keeps its access - it needs
+# it above to fetch its public IP. Infrastructure DaemonSets running with
+# hostNetwork (CSI, CCM) also go through OUTPUT and are therefore unaffected.
 #
-# Une unité systemd plutôt qu'une simple commande : ce script cloud-init ne
-# s'exécute qu'au premier démarrage, la règle serait perdue au premier reboot.
+# A systemd unit rather than a bare command: this cloud-init script runs only at
+# first boot, so the rule would be lost on the first reboot.
 cat <<'EOF' > /etc/systemd/system/block-pod-metadata.service
 [Unit]
-Description=Interdit au réseau de pods d'atteindre le service de métadonnées
+Description=Deny the pod network access to the metadata service
 After=k3s.service
 Requires=k3s.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-# -C teste la présence de la règle : rend l'unité idempotente.
+# -C tests whether the rule is already present, making the unit idempotent.
 ExecStart=/bin/sh -c '/usr/sbin/iptables -C FORWARD -s 10.42.0.0/16 -d 169.254.169.254 -j DROP 2>/dev/null || /usr/sbin/iptables -I FORWARD -s 10.42.0.0/16 -d 169.254.169.254 -j DROP'
 
 [Install]

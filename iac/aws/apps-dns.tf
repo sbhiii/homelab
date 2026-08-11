@@ -1,13 +1,12 @@
-# Enregistrement DNS des applications exposées par l'Ingress du cluster.
+# DNS for the applications exposed through the cluster's Ingress.
 #
-# Un wildcard plutôt qu'un enregistrement par application : les enregistrements
-# explicites l'emportent toujours sur le wildcard, donc oidc.srehomelab.sbhi.io
-# continue de pointer vers CloudFront, et toute nouvelle application exposée par
-# un Ingress fonctionne sans modifier ce fichier.
+# A wildcard rather than one record per application: explicit records always win
+# over the wildcard, so oidc.srehomelab.sbhi.io keeps pointing at CloudFront, and
+# any new application exposed through an Ingress works without touching this file.
 #
-# L'IP vient du remote state de la stack hetzner, comme la clé publique de
-# signature. Un remplacement du noeud change l'IP : il faut alors réappliquer
-# cette stack pour mettre l'enregistrement à jour.
+# The IP comes from the hetzner stack's remote state, the same channel as the
+# signing public key. Replacing the node changes the IP, so this stack must be
+# re-applied to update the record.
 resource "aws_route53_record" "apps_wildcard" {
   zone_id = aws_route53_zone.homelab.zone_id
   name    = "*.${var.dns_zone_name}"
@@ -17,6 +16,6 @@ resource "aws_route53_record" "apps_wildcard" {
 }
 
 locals {
-  # La stack hetzner expose une map indexée par identifiant de noeud.
+  # The hetzner stack exposes a map keyed by node identifier.
   node_public_ip = data.terraform_remote_state.hetzner.outputs.nodes_public_ips[var.ingress_node_id]
 }

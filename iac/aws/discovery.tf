@@ -46,7 +46,7 @@ resource "aws_s3_object" "openid_configuration" {
   content      = local.openid_configuration
   content_type = "application/json"
   etag         = md5(local.openid_configuration)
-  # Borne la fenêtre de péremption : voir le commentaire sur le JWKS.
+  # Bounds the staleness window: see the comment on the JWKS below.
   cache_control = "public, max-age=300"
 }
 
@@ -56,10 +56,10 @@ resource "aws_s3_object" "jwks" {
   content      = local.jwks
   content_type = "application/json"
   etag         = md5(local.jwks)
-  # Sans ceci, la politique CachingOptimized de CloudFront garde le document
-  # 24 h par défaut. Si la clé change, STS continuerait à lire l'ancien JWKS et
-  # rejetterait tous les tokens, avec une erreur peu explicite. 5 minutes borne
-  # la panne sans pour autant marteler l'origine.
+  # Without this, CloudFront's CachingOptimized policy holds the document for 24h
+  # by default. If the key changes, STS would keep reading the stale JWKS and
+  # reject every token with an unhelpful error. Five minutes bounds the outage
+  # without hammering the origin.
   cache_control = "public, max-age=300"
 }
 

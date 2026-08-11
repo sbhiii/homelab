@@ -57,12 +57,12 @@ variable "allowed_mgmt_ips" {
 # server
 
 variable "nodes" {
-  description = "Configuration des noeuds du cluster"
-  # La clé de la map sera le suffixe du nom (ex: '01', 'master', 'worker-gpu')
+  description = "Cluster node configuration."
+  # The map key becomes the name suffix (e.g. '01', 'master', 'worker-gpu').
   type = map(object({
     server_type = string
     ip          = string
-    labels      = optional(map(string), {}) # Pour tagger spécifiquement un noeud
+    labels      = optional(map(string), {}) # To tag a specific node
   }))
 }
 
@@ -80,18 +80,18 @@ variable "github_repo_url" {
 }
 
 # variable "realdebrid_api_key" {
-#   description = "API Token pour RealDebrid"
+#   description = "RealDebrid API token"
 #   type        = string
 #   sensitive   = true
 # }
 
 variable "oidc_issuer_url" {
-  description = "URL publique servant les documents de découverte OIDC du cluster."
+  description = "Public URL serving the cluster's OIDC discovery documents."
   type        = string
   default     = "https://oidc.srehomelab.sbhi.io"
 
   validation {
     condition     = startswith(var.oidc_issuer_url, "https://")
-    error_message = "L'issuer doit être en HTTPS : AWS refuse tout autre schéma."
+    error_message = "The issuer must use HTTPS: AWS rejects any other scheme."
   }
 }
