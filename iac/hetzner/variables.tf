@@ -74,7 +74,7 @@ variable "github_token" {
 }
 
 variable "github_repo_url" {
-  description = "URL HTTPS du repo gitops"
+  description = "HTTPS URL of the gitops repo."
   type        = string
   default     = "https://github.com/sbhiii/sre-homelab-gitops.git"
 }
