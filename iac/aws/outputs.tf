@@ -29,6 +29,6 @@ output "cert_manager_role_arn" {
 }
 
 output "apps_wildcard_target" {
-  description = "IP vers laquelle *.srehomelab.sbhi.io résout."
+  description = "IP that *.srehomelab.sbhi.io resolves to."
   value       = local.node_public_ip
 }

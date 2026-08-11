@@ -13,11 +13,11 @@ output "nodes_private_ips" {
 }
 
 output "sa_public_key_pem" {
-  description = "Clé publique de signature, consommée par la stack AWS pour le JWKS."
+  description = "Signing public key, consumed by the AWS stack to build the JWKS."
   value       = tls_private_key.sa_signing.public_key_pem
 }
 
 output "oidc_issuer_url" {
-  description = "Issuer configuré sur l'API server."
+  description = "Issuer configured on the API server."
   value       = var.oidc_issuer_url
 }
