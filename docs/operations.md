@@ -16,7 +16,7 @@ Keep this file outside both repos — it grants cluster-admin. `.gitignore` in t
 
 ## Re-applying after a node rebuild
 
-Any change to `user_data` — the k3s install flags, the injected manifests, the signing-key logic — forces a full server replacement, not an in-place update. After it lands: the node has a new public IP, so the wildcard record in `iac/aws/apps-dns.tf` is now stale until you `terraform apply` in `iac/aws` again; your kubeconfig needs refetching; and every certificate gets re-issued from scratch (Let's Encrypt allows five duplicate certificates per registered domain per week — don't rebuild repeatedly in one sitting). The signing key, the JWKS, and the entire AWS trust chain are **not** affected — that persistence is the entire point of keeping the key in Terraform state instead of on the node. See [Architecture: the OIDC trust chain](architecture.md#the-oidc-trust-chain) for why.
+Any change to `user_data` — the k3s install flags, the injected manifests, the signing-key logic — forces a full server replacement, not an in-place update. After it lands: the node has a new public IP, so the wildcard record in `iac/aws/apps_dns.tf` is now stale until you `terraform apply` in `iac/aws` again; your kubeconfig needs refetching; and every certificate gets re-issued from scratch (Let's Encrypt allows five duplicate certificates per registered domain per week — don't rebuild repeatedly in one sitting). The signing key, the JWKS, and the entire AWS trust chain are **not** affected — that persistence is the entire point of keeping the key in Terraform state instead of on the node. See [Architecture: the OIDC trust chain](architecture.md#the-oidc-trust-chain) for why.
 
 ## IP drift and the firewall
 

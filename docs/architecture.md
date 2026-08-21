@@ -7,7 +7,7 @@
 ```
 iac/
   bootstrap/   state bucket only. Local state, on purpose. Applied once, ever.
-  aws/         OIDC provider, IAM role, Route53 zone, discovery documents, DNS
+  aws/         OIDC provider, IAM role, discovery documents, DNS records
   hetzner/     the cluster itself: network, firewall, server, signing key
 ```
 
@@ -18,9 +18,19 @@ iac/
 Apply order is always **`hetzner` → `aws`**, never the reverse. `iac/aws` reads two things out of `iac/hetzner`'s state via `terraform_remote_state`:
 
 - `sa_public_key_pem` — the public half of the signing key, used to build the JWKS.
-- `nodes_public_ips` — the node's current IP, used for the wildcard DNS record in [`iac/aws/apps-dns.tf`](../iac/aws/apps-dns.tf).
+- `nodes_public_ips` — the node's current IP, used for the wildcard DNS record in [`iac/aws/apps_dns.tf`](../iac/aws/apps_dns.tf).
 
 Only the *public* key ever crosses that boundary. The private half stays inside `iac/hetzner`'s state and is never exported as an output.
+
+## The zone belongs to a different repository
+
+`iac/aws` writes records into a hosted zone it does not create. The zone is defined in [`sbhi-aws-landing-zone`](https://github.com/sbhiii/sbhi-aws-landing-zone), which also owns the AWS account all of this applies into.
+
+The line falls where it does because destroying the zone is not recoverable by an apply: a replacement gets a new delegation set, so the NS records have to be corrected by hand at the external DNS provider. Anything whose destruction forces a manual edit outside AWS outlives this cluster and is not the cluster's to manage. Everything else here is derived from the signing key or points at the node's current address, so it is recreated whenever the cluster is, and a node rebuild must not require an apply in the landing zone. That rule is recorded as decision 14 there.
+
+The contract between the two repositories is the zone's *name*, resolved with a `data "aws_route53_zone"` lookup rather than another `terraform_remote_state` read. A name is stable; a state file is an implementation detail, and sharing one would let a failed apply in either repository block the other.
+
+The practical consequence when bootstrapping: the zone and its delegation must already exist, or `iac/aws` fails at plan time. See [Getting started](getting-started.md#prerequisites).
 
 ## The bootstrap chain
 
@@ -55,7 +65,7 @@ flowchart TD
     K -->|cloud-init| N["/etc/k3s-oidc/sa.key on the node\nk3s --service-account-signing-key-file"]
     K -->|public_key_pem, via remote state| J["pem_to_jwk.py derives kid/n/e\n(iac/aws/discovery.tf)"]
     J --> S["private S3 bucket"]
-    S -->|Origin Access Control| C["CloudFront\nhttps://oidc.srehomelab.sbhi.io"]
+    S -->|Origin Access Control| C["CloudFront\nhttps://oidc.homelab.sbhi.io"]
     C -->|fetched anonymously| P["aws_iam_openid_connect_provider"]
     P -->|trusts| R["IAM role: cert-manager-route53\n(scoped to sub + aud conditions)"]
     N -->|signs a ServiceAccount token| T["cert-manager's projected token\naud: sts.amazonaws.com"]
@@ -88,13 +98,14 @@ Worth being explicit about, since it's the first question anyone who knows this 
 iac/
   bootstrap/              state bucket (local state, applied once)
     main.tf                aws_s3_bucket + versioning + encryption + public-access-block
+                           + ownership controls + TLS-only bucket policy
     variables.tf, outputs.tf, providers.tf, README.md
 
   aws/                     IAM/DNS/discovery stack (state in S3)
-    dns.tf                  Route53 zone, ACM certificate (us-east-1) + validation
+    dns.tf                  zone lookup, ACM certificate (us-east-1) + validation
     discovery.tf             JWKS derivation, S3 bucket, CloudFront, OAC, bucket policy
     iam.tf                   IAM OIDC provider, cert-manager IAM role and trust policy
-    apps-dns.tf              wildcard A record for the cluster's ingress hostnames
+    apps_dns.tf              wildcard A record for the cluster's ingress hostnames
     scripts/
       pem_to_jwk.py           PEM -> JWK, pure stdlib
       test_pem_to_jwk.py      unit tests against a cross-verified fixture

@@ -1,0 +1,33 @@
+# Copy to terraform.tfvars and fill in.
+# terraform.tfvars is gitignored; this example is not.
+
+# Hetzner Cloud API token, read and write.
+hcloud_token = "REPLACE_ME"
+
+# GitHub Personal Access Token, scope: repo. Rendered into cloud-init so
+# ArgoCD can clone the gitops repository, which puts it in the node's
+# user_data. See docs/security.md.
+github_token = "REPLACE_ME"
+
+project_code = "example"
+environment  = "prod"
+
+# Network. subnet_ip_range must sit inside vpc_cidr, and each node ip inside
+# the subnet.
+vpc_cidr          = "10.0.0.0/16"
+subnet_ip_range   = "10.0.1.0/24"
+server_private_ip = "10.0.1.10"
+
+# SSH (22) and the Kubernetes API (6443) are reachable only from these. A
+# changed home IP locks you out of both until this is updated and re-applied.
+allowed_mgmt_ips = ["203.0.113.10/32"]
+
+# The map key becomes the name suffix and is what ingress_node_id in the aws
+# stack refers to.
+nodes = {
+  "01" = {
+    server_type = "cax11"
+    ip          = "10.0.1.10"
+    labels      = {}
+  }
+}

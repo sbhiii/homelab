@@ -1,11 +1,6 @@
-output "zone_nameservers" {
-  description = "Create these as NS records at Cloudflare to delegate the subdomain."
-  value       = aws_route53_zone.homelab.name_servers
-}
-
 output "hosted_zone_id" {
   description = "Zone ID for the cert-manager solver and the IAM policy."
-  value       = aws_route53_zone.homelab.zone_id
+  value       = data.aws_route53_zone.homelab.zone_id
 }
 
 output "issuer_url" {
@@ -29,6 +24,6 @@ output "cert_manager_role_arn" {
 }
 
 output "apps_wildcard_target" {
-  description = "IP that *.srehomelab.sbhi.io resolves to."
+  description = "IP the apps wildcard record resolves to."
   value       = local.node_public_ip
 }
