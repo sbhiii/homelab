@@ -8,7 +8,7 @@
 
 | Tool | Used for | Notes |
 |---|---|---|
-| [Terraform](https://developer.hashicorp.com/terraform) | everything under `iac/` | developed against 1.14.x; no `required_version` is pinned in code |
+| [Terraform](https://developer.hashicorp.com/terraform) | everything under `iac/` | `required_version = "~> 1.15"` in all three modules |
 | [AWS CLI v2](https://docs.aws.amazon.com/cli/) | applying `iac/aws` and `iac/bootstrap`, and diagnosing the trust chain | needs credentials the Terraform AWS provider can actually read — see the gotcha below |
 | `hcloud` token | applying `iac/hetzner` | a Hetzner Cloud API token, not the CLI itself |
 | `kubectl` | talking to the cluster once it exists | |
@@ -27,16 +27,16 @@ Both halves in the same shell invocation — the exported variables don't persis
 
 ### Accounts
 
-- **A Hetzner Cloud project**, with an API token and an SSH key already uploaded to it. The SSH key must exist under a name that matches `data "hcloud_ssh_key" "samy-ssh"` in [`iac/hetzner/main.tf`](../iac/hetzner/main.tf) — either rename your key to `samy-macbook-pro-ssh` or edit that data source to look up your own.
-- **An AWS account.** IAM permissions to create S3 buckets, CloudFront distributions, ACM certificates, a Route53 hosted zone, and IAM OIDC providers/roles. In this project's own deployment that's an IAM user with broad rights (`iamadmin`) — see [Known limitations](security.md#known-limitations) for why that's not ideal and what a real deployment would do instead.
-- **A domain, or a subdomain you can delegate.** This deployment delegates `srehomelab.sbhi.io` — a subdomain of a domain registered at Cloudflare — to Route53 via NS records, while the domain's apex stays at Cloudflare. Terraform cannot perform that delegation itself; it's the one genuinely manual step in the whole bootstrap (see [Bootstrapping the stack](#bootstrapping-the-stack) below).
+- **A Hetzner Cloud project**, with an API token and an SSH key already uploaded to it. The SSH key must exist under a name that matches `data "hcloud_ssh_key" "samy_ssh"` in [`iac/hetzner/main.tf`](../iac/hetzner/main.tf) — either rename your key to `samy-macbook-pro-ssh` or edit that data source to look up your own.
+- **An AWS account.** IAM permissions to create S3 buckets, CloudFront distributions, ACM certificates, and IAM OIDC providers/roles. This deployment applies into a member account of an AWS Organization, authenticating through IAM Identity Center rather than an IAM user, so no long-lived AWS credential exists for these stacks.
+- **A delegated subdomain, with its hosted zone already created.** This repository does not create the zone. It looks one up by name and writes records into it, so the zone and its NS delegation must both exist first. They belong to whatever owns your DNS structure, which for this deployment is [`sbhi-aws-landing-zone`](https://github.com/sbhiii/sbhi-aws-landing-zone); the reasoning is recorded there as decision 14. Terraform cannot perform the delegation itself, so that remains the one genuinely manual step, it just happens before this walkthrough rather than inside it.
 - **A GitHub repository forked from [`sre-homelab-gitops`](https://github.com/sbhiii/sre-homelab-gitops)**, plus a token ArgoCD can use to read it — classic PAT with `repo` scope, or a fine-grained PAT scoped to that repository with `Contents: Read`.
 
 ### Background knowledge
 
 This project assumes comfort with, roughly in order of how load-bearing they are:
 
-- **Terraform**: modules, remote state, the `data "terraform_remote_state"` pattern, and why a `-target` apply is sometimes the right call rather than a smell (see below).
+- **Terraform**: modules, remote state, and the `data "terraform_remote_state"` pattern, which is how the `aws` stack reads the signing public key out of the `hetzner` stack.
 - **AWS IAM and OIDC federation**: what `sts:AssumeRoleWithWebIdentity` actually checks, what an OIDC provider's thumbprint is for, and why trust-policy conditions matter. If IRSA on EKS is unfamiliar, read up on that first — this repo builds the same thing by hand.
 - **Kubernetes fundamentals**: ServiceAccounts, projected tokens, and enough `kubectl` to read logs and describe resources. ArgoCD-specific knowledge helps but isn't required to understand this repo.
 - **DNS**: NS delegation between providers, A vs. ALIAS records, and how ACME DNS-01 challenges work.
@@ -52,13 +52,14 @@ This walks through bootstrapping the whole stack from nothing. It assumes you've
 
 ```bash
 cd iac/bootstrap
+cp terraform.tfvars.example terraform.tfvars   # then fill it in
 terraform init
-terraform apply -var state_bucket_name=<a-globally-unique-name>
+terraform apply
 ```
 
 This is local state, on purpose — see [`iac/bootstrap/README.md`](../iac/bootstrap/README.md). Keep that state file safe; losing it means `terraform import`-ing the bucket back rather than just re-applying.
 
-**2. Point the other two modules at that bucket.** Edit the hardcoded `bucket = "srehomelab-tfstate"` in [`iac/hetzner/backend.tf`](../iac/hetzner/backend.tf) and [`iac/aws/backend.tf`](../iac/aws/backend.tf) to the name you just chose — backend blocks can't reference variables, so this is a literal string edit, not a `tfvars` change.
+**2. Point the other two modules at that bucket.** Edit the hardcoded `bucket = "sbhi-homelab-tfstate"` in [`iac/hetzner/backend.tf`](../iac/hetzner/backend.tf) and [`iac/aws/backend.tf`](../iac/aws/backend.tf) to the name you just chose — backend blocks can't reference variables, so this is a literal string edit, not a `tfvars` change.
 
 **3. Fill in `iac/hetzner/terraform.tfvars`** (gitignored, never commit it):
 
@@ -90,42 +91,33 @@ terraform apply
 
 This creates the network, firewall, signing key, and server, and boots k3s with OIDC federation already configured. The issuer URL won't resolve yet — that's expected and harmless, since nothing has tried to validate a token against it so far.
 
-**5. Fill in `iac/aws/terraform.tfvars`:**
-
-```hcl
-state_bucket_name = "<the bucket from step 1>"
-dns_zone_name      = "<your-subdomain>"
-```
-
-Then create only the DNS zone first:
-
-```bash
-cd iac/aws
-terraform init
-terraform apply -target=aws_route53_zone.homelab
-```
-
-`-target` here is deliberate, not a smell: everything else in this stack blocks on a delegation that only exists once you've completed the next step, and that step needs the nameservers this creates.
-
-**6. Delegate DNS at your registrar.** `terraform output zone_nameservers` prints four nameservers. Create NS records for your subdomain at whichever provider hosts your domain's apex, pointing at those four — DNS-only, not proxied if your registrar offers that toggle. Confirm propagation before continuing:
+**5. Confirm the delegation resolves.** The zone is looked up by name, not created here, so the whole stack fails at plan time if it does not exist, and `aws_acm_certificate_validation` hangs until the delegation actually resolves.
 
 ```bash
 dig +short NS <your-subdomain> @1.1.1.1
 ```
 
-Nothing further will work until this resolves.
+Nothing further will work until this returns the zone's nameservers.
 
-**7. Finish the `aws` apply.**
+**6. Fill in `iac/aws/terraform.tfvars` and apply.**
+
+```hcl
+shared_services_account_id = "<the account this applies into>"
+state_bucket_name          = "<the bucket from step 1>"
+dns_zone_name              = "<your-subdomain>"
+```
 
 ```bash
+cd iac/aws
+terraform init
 terraform apply
 ```
 
 This validates the ACM certificate, stands up CloudFront, publishes the JWKS, creates the IAM OIDC provider, and creates the `cert-manager-route53` role. Note `terraform output hosted_zone_id` and `terraform output cert_manager_role_arn` — you need both next.
 
-**8. Wire the outputs into your gitops fork.** `apps/cert-manager/cluster-issuer.yml` in [`sre-homelab-gitops`](https://github.com/sbhiii/sre-homelab-gitops) hardcodes `hostedZoneID` and `role` as literal values — they are not templated across repos. Edit that file with the two outputs from the previous step, and set `apps/cert-manager/cluster-issuer.yml`'s `email` field to a real address you control (Let's Encrypt sends expiry notices there and doesn't verify deliverability). Commit and push.
+**7. Wire the outputs into your gitops fork.** `apps/cert-manager/cluster-issuer.yml` in [`sre-homelab-gitops`](https://github.com/sbhiii/sre-homelab-gitops) hardcodes `hostedZoneID` and `role` as literal values — they are not templated across repos. Edit that file with the two outputs from the previous step, and set `apps/cert-manager/cluster-issuer.yml`'s `email` field to a real address you control (Let's Encrypt sends expiry notices there and doesn't verify deliverability). Commit and push.
 
-**9. Watch it converge.** ArgoCD is already running and pointed at your gitops fork from step 4. Within a few minutes, `cert-manager` should sync, obtain a certificate for your ArgoCD hostname via DNS-01 through the role you just created, and Traefik should start serving it.
+**8. Watch it converge.** ArgoCD is already running and pointed at your gitops fork from step 4. Within a few minutes, `cert-manager` should sync, obtain a certificate for your ArgoCD hostname via DNS-01 through the role you just created, and Traefik should start serving it.
 
 ```bash
 export KUBECONFIG=./k3s-config.yaml   # see Operations for how to fetch this
