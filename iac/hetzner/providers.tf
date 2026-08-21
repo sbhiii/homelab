@@ -1,5 +1,7 @@
 # Tell terraform to use the provider and select a version.
 terraform {
+  required_version = "~> 1.15"
+
   required_providers {
     hcloud = {
       source  = "hetznercloud/hcloud"
