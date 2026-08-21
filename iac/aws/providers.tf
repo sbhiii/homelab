@@ -18,12 +18,30 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  region              = var.region
+  allowed_account_ids = [var.shared_services_account_id]
+
+  default_tags {
+    tags = {
+      Owner      = "sbhi"
+      ManagedBy  = "Terraform"
+      Repository = "sre-homelab"
+    }
+  }
 }
 
 # CloudFront only accepts ACM certificates issued in us-east-1, wherever the
 # rest of the stack lives.
 provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
+  alias               = "us_east_1"
+  region              = "us-east-1"
+  allowed_account_ids = [var.shared_services_account_id]
+
+  default_tags {
+    tags = {
+      Owner      = "sbhi"
+      ManagedBy  = "Terraform"
+      Repository = "sre-homelab"
+    }
+  }
 }

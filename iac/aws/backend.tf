@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket       = "srehomelab-tfstate"
+    bucket       = "sbhi-homelab-tfstate"
     key          = "aws/terraform.tfstate"
     region       = "eu-west-1"
     encrypt      = true

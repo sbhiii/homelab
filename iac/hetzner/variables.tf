@@ -85,10 +85,13 @@ variable "github_repo_url" {
 #   sensitive   = true
 # }
 
+# Must match local.issuer_url in the aws stack exactly. Neither stack can catch a
+# mismatch: the API server stamps this into every token's iss claim, and AWS only
+# rejects it at AssumeRoleWithWebIdentity time with InvalidIdentityToken.
 variable "oidc_issuer_url" {
   description = "Public URL serving the cluster's OIDC discovery documents."
   type        = string
-  default     = "https://oidc.srehomelab.sbhi.io"
+  default     = "https://oidc.homelab.sbhi.io"
 
   validation {
     condition     = startswith(var.oidc_issuer_url, "https://")

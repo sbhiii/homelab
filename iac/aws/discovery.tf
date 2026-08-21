@@ -128,7 +128,7 @@ resource "aws_s3_bucket_policy" "discovery" {
 }
 
 resource "aws_route53_record" "oidc" {
-  zone_id = aws_route53_zone.homelab.zone_id
+  zone_id = data.aws_route53_zone.homelab.zone_id
   name    = local.issuer_host
   type    = "A"
 

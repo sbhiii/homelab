@@ -48,7 +48,7 @@ data "aws_iam_policy_document" "cert_manager_route53" {
   statement {
     sid       = "ChangeRecordsInHomelabZone"
     actions   = ["route53:ChangeResourceRecordSets"]
-    resources = ["arn:aws:route53:::hostedzone/${aws_route53_zone.homelab.zone_id}"]
+    resources = ["arn:aws:route53:::hostedzone/${data.aws_route53_zone.homelab.zone_id}"]
   }
 
   statement {

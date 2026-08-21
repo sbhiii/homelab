@@ -4,10 +4,14 @@ variable "region" {
   default     = "eu-west-1"
 }
 
-variable "dns_zone_name" {
-  description = "Hosted zone delegated from Cloudflare."
+variable "shared_services_account_id" {
+  description = "Account this stack applies into. Guard rail for allowed_account_ids."
   type        = string
-  default     = "srehomelab.sbhi.io"
+}
+
+variable "dns_zone_name" {
+  description = "Zone delegated to this account, created by the landing zone repository and looked up by name."
+  type        = string
 }
 
 variable "oidc_subdomain" {
