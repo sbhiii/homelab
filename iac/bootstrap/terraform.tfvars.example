@@ -1,0 +1,12 @@
+# Copy to terraform.tfvars and fill in.
+# terraform.tfvars is gitignored; this example is not.
+
+# Guard rail: apply fails if the caller is not this account.
+shared_services_account_id = "000000000000"
+
+# Globally unique. Holds the state for the aws and hetzner stacks, including
+# the cluster's ServiceAccount signing private key.
+state_bucket_name = "example-homelab-tfstate"
+
+# Optional, defaults to eu-west-1.
+# region = "eu-west-1"

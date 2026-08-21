@@ -1,5 +1,5 @@
 # ssh access
-data "hcloud_ssh_key" "samy-ssh" {
+data "hcloud_ssh_key" "samy_ssh" {
   name = "samy-macbook-pro-ssh"
 }
 # Network
@@ -17,15 +17,15 @@ locals {
 }
 
 
-resource "hcloud_network" "private-network" {
+resource "hcloud_network" "private_network" {
   name     = local.network_name
   ip_range = var.vpc_cidr
   labels   = local.common_labels
 }
 
-resource "hcloud_network_subnet" "network-subnet" {
+resource "hcloud_network_subnet" "network_subnet" {
   type         = "cloud"
-  network_id   = hcloud_network.private-network.id
+  network_id   = hcloud_network.private_network.id
   network_zone = "eu-central"
   ip_range     = var.subnet_ip_range
 }
@@ -97,7 +97,7 @@ resource "hcloud_server" "nodes" {
   server_type = each.value.server_type
   image       = "debian-12"
   location    = "nbg1"
-  ssh_keys    = [data.hcloud_ssh_key.samy-ssh.id]
+  ssh_keys    = [data.hcloud_ssh_key.samy_ssh.id]
 
   user_data = templatefile("${path.module}/scripts/init-cluster.sh.tftpl", {
     argocd_manifest = templatefile("${path.module}/manifests/argocd.yml", {})
@@ -114,7 +114,7 @@ resource "hcloud_server" "nodes" {
   })
 
   network {
-    network_id = hcloud_network.private-network.id
+    network_id = hcloud_network.private_network.id
     ip         = each.value.ip
   }
 
@@ -132,6 +132,6 @@ resource "hcloud_server" "nodes" {
   )
 
   depends_on = [
-    hcloud_network_subnet.network-subnet
+    hcloud_network_subnet.network_subnet
   ]
 }

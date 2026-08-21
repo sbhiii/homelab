@@ -1,0 +1,20 @@
+# Copy to terraform.tfvars and fill in.
+# terraform.tfvars is gitignored; this example is not.
+
+# Guard rail: apply fails if the caller is not this account.
+shared_services_account_id = "000000000000"
+
+# Zone delegated to this account. Created by the landing zone repository, not
+# here, and looked up by name. It must exist before this stack is applied.
+dns_zone_name = "homelab.example.com"
+
+# Bucket holding the hetzner stack's state, read for the signing public key.
+# Same bucket this stack's own backend uses.
+state_bucket_name = "example-homelab-tfstate"
+
+# Optional, all have defaults.
+# region                       = "eu-west-1"
+# oidc_subdomain               = "oidc"
+# cert_manager_namespace       = "cert-manager"
+# cert_manager_service_account = "cert-manager"
+# ingress_node_id              = "01"
