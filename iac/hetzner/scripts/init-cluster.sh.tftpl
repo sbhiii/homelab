@@ -35,7 +35,25 @@ chmod 644 /etc/k3s-oidc/sa.pub
 chown root:root /etc/k3s-oidc/sa.key /etc/k3s-oidc/sa.pub
 
 # 4. Installation K3s
-PUBLIC_IP=$(curl -s http://169.254.169.254/hetzner/v1/metadata/public-ipv4)
+#
+# Read from eth0, not from the metadata service. Attaching this node to a
+# Hetzner private network installs a route sending 169.254.169.254 out the
+# private interface, where it is black-holed, so the metadata service is
+# unreachable from the host and curl returns empty.
+#
+# That mattered far more than it looks. An empty PUBLIC_IP made the line below
+# read "--tls-san --write-kubeconfig-mode", so --tls-san consumed the next flag
+# and every argument after it shifted. k3s silently dropped all four
+# --kube-apiserver-arg flags and fell back to its own issuer and its own signing
+# key, leaving the published JWKS unable to match any token the API server
+# issued. Nothing failed loudly: the cluster came up healthy and only
+# AssumeRoleWithWebIdentity would have reported it, as InvalidIdentityToken.
+PUBLIC_IP=$(ip -4 -o addr show dev eth0 scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
+if [ -z "$PUBLIC_IP" ]; then
+  echo "FATAL: could not determine the public IPv4 of eth0; refusing to install k3s" >&2
+  exit 1
+fi
+
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
   --tls-san $PUBLIC_IP \
   --write-kubeconfig-mode 644 \
