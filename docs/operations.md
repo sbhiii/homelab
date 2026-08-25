@@ -7,10 +7,27 @@
 The API server's certificate is SAN'd to the node's public IP, so:
 
 ```bash
+export AWS_PROFILE=sbhi-shared-services
 IP=$(terraform -chdir=iac/hetzner output -json nodes_public_ips | python3 -c 'import json,sys;print(list(json.load(sys.stdin).values())[0])')
-scp root@$IP:/etc/rancher/k3s/k3s.yaml ./k3s-config.yaml
-# then edit the `server:` field from 127.0.0.1 to $IP
+scp -i ~/.ssh/<your-hetzner-key> root@$IP:/etc/rancher/k3s/k3s.yaml ./k3s-config.yaml
+sed -i '' "s#https://127.0.0.1:6443#https://$IP:6443#" ./k3s-config.yaml
 ```
+
+`AWS_PROFILE` is not optional. This stack keeps its state in S3, so `terraform
+output` needs credentials. Without them it fails to stderr, `$IP` is silently
+empty, and everything after it fails in a way that looks like an SSH problem.
+
+`-i` matters if your agent holds more than one key. Only the key uploaded to
+Hetzner authenticates; without it SSH offers whatever the agent has and stops at
+`Permission denied (publickey)`.
+
+Two failures worth telling apart:
+
+- **SSH times out.** The firewall, not the key. See
+  [IP drift](#ip-drift-and-the-firewall).
+- **SSH warns the host key has changed.** Expected after a node rebuild. Hetzner
+  often reassigns the same IP to the replacement, which has a new host key.
+  `ssh-keygen -R $IP`, then reconnect.
 
 Keep this file outside both repos — it grants cluster-admin. `.gitignore` in this repo blocks `k3s-config.yaml` / `k3s.yaml` as a backstop, but that's not a substitute for actually keeping it elsewhere.
 
