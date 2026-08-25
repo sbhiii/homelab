@@ -58,20 +58,6 @@ data "aws_iam_policy_document" "cert_manager_route53" {
     actions   = ["route53:GetChange"]
     resources = ["arn:aws:route53:::change/*"]
   }
-
-  statement {
-    # Lets cert-manager resolve the zone from the record name, so the
-    # ClusterIssuer does not have to name a zone ID and the gitops repository
-    # stays free of AWS identifiers.
-    #
-    # The cost is real and is accepted deliberately: this action takes no
-    # resource-level permissions, so it cannot be scoped to one zone. The role
-    # can enumerate every hosted zone in the account. It grants no read of
-    # record contents and no write, and this account holds one zone.
-    sid       = "FindZoneByName"
-    actions   = ["route53:ListHostedZonesByName"]
-    resources = ["*"]
-  }
 }
 
 resource "aws_iam_role_policy" "cert_manager_route53" {
