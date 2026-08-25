@@ -1,8 +1,8 @@
-# sre-homelab
+# homelab
 
 Terraform for a single-node [k3s](https://k3s.io/) homelab on [Hetzner Cloud](https://www.hetzner.com/cloud/), where `cert-manager` authenticates to AWS Route53 by federating the cluster's own identity into IAM — the same mechanism EKS calls IRSA — instead of holding a static AWS access key.
 
-This repo builds the cluster and the AWS identity it uses. Everything that actually *runs* on the cluster — ArgoCD applications, ingress rules, RBAC — lives in the companion repo, [`sre-homelab-gitops`](https://github.com/sbhiii/sre-homelab-gitops).
+This repo builds the cluster and the AWS identity it uses. Everything that actually *runs* on the cluster — ArgoCD applications, ingress rules, RBAC — lives in the companion repo, [`homelab-gitops`](https://github.com/sbhiii/homelab-gitops).
 
 ## Why
 
@@ -33,4 +33,4 @@ flowchart LR
 
 ## Related repository
 
-[`sre-homelab-gitops`](https://github.com/sbhiii/sre-homelab-gitops) holds everything ArgoCD manages once the cluster exists: the app-of-apps bootstrap, `cert-manager`'s `ClusterIssuer` and RBAC, Traefik, and the `NetworkPolicy` layer that's the other half of the metadata-service mitigation. Read this repo for how the cluster and its AWS identity get built; read that one for what actually runs.
+[`homelab-gitops`](https://github.com/sbhiii/homelab-gitops) holds everything ArgoCD manages once the cluster exists: the app-of-apps bootstrap, `cert-manager`'s `ClusterIssuer` and RBAC, Traefik, and the `NetworkPolicy` layer that's the other half of the metadata-service mitigation. Read this repo for how the cluster and its AWS identity get built; read that one for what actually runs.

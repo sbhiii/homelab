@@ -42,7 +42,7 @@ flowchart TD
     B --> C["writes numbered manifests to\n/var/lib/rancher/k3s/server/manifests/"]
     C --> D["k3s installs, auto-applies that\ndirectory in alphabetical order"]
     D --> E["ArgoCD HelmChart installs"]
-    E --> F["root-app Application created,\npointing at sre-homelab-gitops/bootstrap"]
+    E --> F["root-app Application created,\npointing at homelab-gitops/bootstrap"]
     F --> G["ArgoCD app-of-apps takes over:\nevery file in bootstrap/ becomes an Application"]
     G --> H["from here, the gitops repo is the\nonly input to the cluster"]
 ```
@@ -55,7 +55,7 @@ Concretely, [`iac/hetzner/scripts/init-cluster.sh.tftpl`](../iac/hetzner/scripts
 4. Installs k3s itself, with `--disable traefik --disable servicelb` (both are reprovided through GitOps instead) and four `--kube-apiserver-arg` flags that turn on OIDC federation — see below.
 5. Installs a `systemd` unit blocking pod traffic to Hetzner's metadata service — see [Security model](security.md).
 
-Everything after step 2 is GitOps: `root-app` is an app-of-apps, so every file under `sre-homelab-gitops/bootstrap/` becomes its own ArgoCD `Application`, synced in the order given by its `argocd.argoproj.io/sync-wave` annotation. Manual `kubectl edit` on anything ArgoCD owns gets reverted on the next reconcile.
+Everything after step 2 is GitOps: `root-app` is an app-of-apps, so every file under `homelab-gitops/bootstrap/` becomes its own ArgoCD `Application`, synced in the order given by its `argocd.argoproj.io/sync-wave` annotation. Manual `kubectl edit` on anything ArgoCD owns gets reverted on the next reconcile.
 
 ## The OIDC trust chain
 
