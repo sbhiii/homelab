@@ -30,7 +30,7 @@ Both halves in the same shell invocation — the exported variables don't persis
 - **A Hetzner Cloud project**, with an API token and an SSH key already uploaded to it. The SSH key must exist under a name that matches `data "hcloud_ssh_key" "samy_ssh"` in [`iac/hetzner/main.tf`](../iac/hetzner/main.tf) — either rename your key to `samy-macbook-pro-ssh` or edit that data source to look up your own.
 - **An AWS account.** IAM permissions to create S3 buckets, CloudFront distributions, ACM certificates, and IAM OIDC providers/roles. This deployment applies into a member account of an AWS Organization, authenticating through IAM Identity Center rather than an IAM user, so no long-lived AWS credential exists for these stacks.
 - **A delegated subdomain, with its hosted zone already created.** This repository does not create the zone. It looks one up by name and writes records into it, so the zone and its NS delegation must both exist first. They belong to whatever owns your DNS structure, which for this deployment is [`sbhi-aws-landing-zone`](https://github.com/sbhiii/sbhi-aws-landing-zone); the reasoning is recorded there as decision 14. Terraform cannot perform the delegation itself, so that remains the one genuinely manual step, it just happens before this walkthrough rather than inside it.
-- **A GitHub repository forked from [`sre-homelab-gitops`](https://github.com/sbhiii/sre-homelab-gitops)**, plus a token ArgoCD can use to read it — classic PAT with `repo` scope, or a fine-grained PAT scoped to that repository with `Contents: Read`.
+- **A GitHub repository forked from [`homelab-gitops`](https://github.com/sbhiii/homelab-gitops)**, plus a token ArgoCD can use to read it — classic PAT with `repo` scope, or a fine-grained PAT scoped to that repository with `Contents: Read`.
 
 ### Background knowledge
 
@@ -75,7 +75,7 @@ nodes = {
   "01" = { server_type = "cpx32", ip = "10.100.0.2" }
 }
 github_token       = "..."
-github_repo_url    = "https://github.com/<you>/sre-homelab-gitops.git"
+github_repo_url    = "https://github.com/<you>/homelab-gitops.git"
 oidc_issuer_url    = "https://oidc.<your-subdomain>"
 ```
 
@@ -115,7 +115,7 @@ terraform apply
 
 This validates the ACM certificate, stands up CloudFront, publishes the JWKS, creates the IAM OIDC provider, and creates the `cert-manager-route53` role. Note `terraform output hosted_zone_id` and `terraform output cert_manager_role_arn` — you need both next.
 
-**7. Wire the outputs into your gitops fork.** `apps/cert-manager/cluster-issuer.yml` in [`sre-homelab-gitops`](https://github.com/sbhiii/sre-homelab-gitops) hardcodes `hostedZoneID` and `role` as literal values — they are not templated across repos. Edit that file with the two outputs from the previous step, and set `apps/cert-manager/cluster-issuer.yml`'s `email` field to a real address you control (Let's Encrypt sends expiry notices there and doesn't verify deliverability). Commit and push.
+**7. Wire the outputs into your gitops fork.** `apps/cert-manager/cluster-issuer.yml` in [`homelab-gitops`](https://github.com/sbhiii/homelab-gitops) hardcodes `hostedZoneID` and `role` as literal values — they are not templated across repos. Edit that file with the two outputs from the previous step, and set `apps/cert-manager/cluster-issuer.yml`'s `email` field to a real address you control (Let's Encrypt sends expiry notices there and doesn't verify deliverability). Commit and push.
 
 **8. Watch it converge.** ArgoCD is already running and pointed at your gitops fork from step 4. Within a few minutes, `cert-manager` should sync, obtain a certificate for your ArgoCD hostname via DNS-01 through the role you just created, and Traefik should start serving it.
 

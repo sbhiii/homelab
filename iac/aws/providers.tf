@@ -25,7 +25,7 @@ provider "aws" {
     tags = {
       Owner      = "sbhi"
       ManagedBy  = "Terraform"
-      Repository = "sre-homelab"
+      Repository = "homelab"
     }
   }
 }
@@ -41,7 +41,7 @@ provider "aws" {
     tags = {
       Owner      = "sbhi"
       ManagedBy  = "Terraform"
-      Repository = "sre-homelab"
+      Repository = "homelab"
     }
   }
 }
