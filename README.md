@@ -26,7 +26,7 @@ flowchart LR
 
 | | |
 |---|---|
-| **[Architecture](docs/architecture.md)** | Why three Terraform modules, the full bootstrap chain, the OIDC trust chain in detail, and why not EKS / IAM Roles Anywhere / SPIFFE |
+| **[Architecture](docs/architecture.md)** | Why four Terraform modules, the full bootstrap chain, the OIDC trust chain in detail, and why not EKS / IAM Roles Anywhere / SPIFFE |
 | **[Getting started](docs/getting-started.md)** | Prerequisites — tools, accounts, background knowledge — and a full walkthrough for forking and bootstrapping the stack from nothing |
 | **[Operations](docs/operations.md)** | Kubeconfig, node rebuilds, key rotation, cost, troubleshooting |
 | **[Security model](docs/security.md)** | What has no credential, what's still a secret and why, the metadata-service mitigation, and known limitations stated plainly |
