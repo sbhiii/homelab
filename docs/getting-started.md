@@ -6,16 +6,16 @@
 
 ### Tools
 
-| Tool                                                   | Used for                                                                              | Notes                                                                                                   |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| [Terraform](https://developer.hashicorp.com/terraform) | everything under `iac/`                                                               | `required_version = "~> 1.15"` in all three modules                                                     |
-| [AWS CLI v2](https://docs.aws.amazon.com/cli/)         | applying `iac/aws` and `iac/bootstrap`, and diagnosing the trust chain                | needs credentials the Terraform AWS provider can actually read — see the gotcha below                   |
-| `hcloud` token                                         | applying `iac/hetzner`                                                                | a Hetzner Cloud API token, not the CLI itself                                                           |
-| `kubectl`                                              | talking to the cluster once it exists                                                 |                                                                                                         |
-| `helm`                                                 | required by `kubectl kustomize --enable-helm` when validating the gitops repo locally | ArgoCD's repo-server needs the equivalent server-side; this is only for local checks                    |
-| `ssh`                                                  | reaching the node directly (cloud-init logs, emergency access)                        |                                                                                                         |
-| `dig` / `openssl` / `curl`                             | verifying DNS delegation and the OIDC discovery endpoints                             |                                                                                                         |
-| Python 3                                               | `terraform apply` in `iac/aws` shells out to it                                       | `pem_to_jwk.py` is invoked as a Terraform `external` data source, stdlib only — no `pip install` needed |
+| Tool                                                   | Used for                                                                               | Notes                                                                                                   |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| [Terraform](https://developer.hashicorp.com/terraform) | everything under `iac/`                                                                | `required_version = "~> 1.15"` in all three modules                                                     |
+| [AWS CLI v2](https://docs.aws.amazon.com/cli/)         | applying `iac/aws-shared-services` and `iac/bootstrap`, and diagnosing the trust chain | needs credentials the Terraform AWS provider can actually read — see the gotcha below                   |
+| `hcloud` token                                         | applying `iac/hetzner`                                                                 | a Hetzner Cloud API token, not the CLI itself                                                           |
+| `kubectl`                                              | talking to the cluster once it exists                                                  |                                                                                                         |
+| `helm`                                                 | required by `kubectl kustomize --enable-helm` when validating the gitops repo locally  | ArgoCD's repo-server needs the equivalent server-side; this is only for local checks                    |
+| `ssh`                                                  | reaching the node directly (cloud-init logs, emergency access)                         |                                                                                                         |
+| `dig` / `openssl` / `curl`                             | verifying DNS delegation and the OIDC discovery endpoints                              |                                                                                                         |
+| Python 3                                               | `terraform apply` in `iac/aws-shared-services` shells out to it                        | `pem_to_jwk.py` is invoked as a Terraform `external` data source, stdlib only — no `pip install` needed |
 
 **A credentials gotcha worth knowing before you start:** if your AWS CLI is configured via `aws sso login` / `aws login` (i.e. it stores a session rather than static keys), the Terraform AWS provider often cannot read that session directly. The reliable pattern is:
 
@@ -59,7 +59,7 @@ terraform apply
 
 This is local state, on purpose — see [`iac/bootstrap/README.md`](../iac/bootstrap/README.md). Keep that state file safe; losing it means `terraform import`-ing the bucket back rather than just re-applying.
 
-**2. Point the other two modules at that bucket.** Edit the hardcoded `bucket = "sbhi-homelab-tfstate"` in [`iac/hetzner/backend.tf`](../iac/hetzner/backend.tf) and [`iac/aws/backend.tf`](../iac/aws/backend.tf) to the name you just chose — backend blocks can't reference variables, so this is a literal string edit, not a `tfvars` change.
+**2. Point the other two modules at that bucket.** Edit the hardcoded `bucket = "sbhi-homelab-tfstate"` in [`iac/hetzner/backend.tf`](../iac/hetzner/backend.tf) and [`iac/aws-shared-services/backend.tf`](../iac/aws-shared-services/backend.tf) to the name you just chose — backend blocks can't reference variables, so this is a literal string edit, not a `tfvars` change.
 
 **3. Fill in `iac/hetzner/terraform.tfvars`** (gitignored, never commit it):
 
@@ -98,7 +98,7 @@ dig +short NS <your-subdomain> @1.1.1.1
 
 Nothing further will work until this returns the zone's nameservers.
 
-**6. Fill in `iac/aws/terraform.tfvars` and apply.**
+**6. Fill in `iac/aws-shared-services/terraform.tfvars` and apply.**
 
 ```hcl
 shared_services_account_id = "<the account this applies into>"
@@ -107,7 +107,7 @@ dns_zone_name              = "<your-subdomain>"
 ```
 
 ```bash
-cd iac/aws
+cd iac/aws-shared-services
 terraform init
 terraform apply
 ```

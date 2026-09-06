@@ -33,7 +33,7 @@ Keep this file outside both repos — it grants cluster-admin. `.gitignore` in t
 
 ## Re-applying after a node rebuild
 
-Any change to `user_data` — the k3s install flags, the injected manifests, the signing-key logic — forces a full server replacement, not an in-place update. After it lands: the node has a new public IP, so the wildcard record in `iac/aws/apps_dns.tf` is now stale until you `terraform apply` in `iac/aws` again; your kubeconfig needs refetching; and every certificate gets re-issued from scratch (Let's Encrypt allows five duplicate certificates per registered domain per week — don't rebuild repeatedly in one sitting). The signing key, the JWKS, and the entire AWS trust chain are **not** affected — that persistence is the entire point of keeping the key in Terraform state instead of on the node. See [Architecture: the OIDC trust chain](architecture.md#the-oidc-trust-chain) for why.
+Any change to `user_data` — the k3s install flags, the injected manifests, the signing-key logic — forces a full server replacement, not an in-place update. After it lands: the node has a new public IP, so the wildcard record in `iac/aws-shared-services/apps_dns.tf` is now stale until you `terraform apply` in `iac/aws-shared-services` again; your kubeconfig needs refetching; and every certificate gets re-issued from scratch (Let's Encrypt allows five duplicate certificates per registered domain per week — don't rebuild repeatedly in one sitting). The signing key, the JWKS, and the entire AWS trust chain are **not** affected — that persistence is the entire point of keeping the key in Terraform state instead of on the node. See [Architecture: the OIDC trust chain](architecture.md#the-oidc-trust-chain) for why.
 
 ## IP drift and the firewall
 
@@ -41,7 +41,7 @@ Any change to `user_data` — the k3s install flags, the injected manifests, the
 
 ## Rotating the signing key
 
-There's no supported way to do this without a rebuild — the JWKS in `iac/aws/discovery.tf` publishes exactly one key, not an old-and-new pair during an overlap window. Rotating means: `terraform destroy` (or `-replace`) the `hcloud_server` resource in `iac/hetzner`, then `terraform apply` in `iac/aws` to republish the new public key. Budget for a short certificate-issuance gap while that happens.
+There's no supported way to do this without a rebuild — the JWKS in `iac/aws-shared-services/discovery.tf` publishes exactly one key, not an old-and-new pair during an overlap window. Rotating means: `terraform destroy` (or `-replace`) the `hcloud_server` resource in `iac/hetzner`, then `terraform apply` in `iac/aws-shared-services` to republish the new public key. Budget for a short certificate-issuance gap while that happens.
 
 ## Adding a node
 
@@ -49,7 +49,7 @@ There's no supported way to do this without a rebuild — the JWKS in `iac/aws/d
 
 ## Cost
 
-This deployment runs a `cpx32` (4 vCPU / 8 GB / 160 GB) Hetzner server at roughly €35/month. Hetzner's cheaper shared-CPU lines (`cx*`, `cax*`) have had little to no stock in EU datacenters at various points — check availability *and* price before picking a `server_type`, since equivalently-specced tiers can differ by several multiples. On the AWS side: a Route53 hosted zone (~$0.50/month), a handful of tiny S3 objects, and a low-traffic CloudFront distribution are all effectively free at this scale.
+This deployment runs a `cpx32` (4 vCPU / 8 GB / 160 GB) Hetzner server at roughly €35/month. Hetzner's cheaper shared-CPU lines (`cx*`, `cax*`) have had little to no stock in EU datacenters at various points — check availability _and_ price before picking a `server_type`, since equivalently-specced tiers can differ by several multiples. On the AWS side: a Route53 hosted zone (~$0.50/month), a handful of tiny S3 objects, and a low-traffic CloudFront distribution are all effectively free at this scale.
 
 ## Troubleshooting
 
