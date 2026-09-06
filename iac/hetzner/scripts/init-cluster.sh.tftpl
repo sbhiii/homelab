@@ -14,10 +14,6 @@ cat <<EOF > /var/lib/rancher/k3s/server/manifests/01-argocd-helm.yaml
 ${argocd_manifest}
 EOF
 
-cat <<EOF > /var/lib/rancher/k3s/server/manifests/02-argocd-repo-secret.yaml
-${argocd_repo_secret}
-EOF
-
 cat <<EOF > /var/lib/rancher/k3s/server/manifests/03-argocd-root-app.yaml
 ${argocd_root_app}
 EOF
