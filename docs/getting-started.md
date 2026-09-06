@@ -8,7 +8,7 @@
 
 | Tool                                                   | Used for                                                                               | Notes                                                                                                   |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| [Terraform](https://developer.hashicorp.com/terraform) | everything under `iac/`                                                                | `required_version = "~> 1.15"` in all three modules                                                     |
+| [Terraform](https://developer.hashicorp.com/terraform) | everything under `iac/`                                                                | `required_version = "~> 1.15"` in every module                                                     |
 | [AWS CLI v2](https://docs.aws.amazon.com/cli/)         | applying `iac/aws-shared-services` and `iac/bootstrap`, and diagnosing the trust chain | needs credentials the Terraform AWS provider can actually read — see the gotcha below                   |
 | `hcloud` token                                         | applying `iac/hetzner`                                                                 | a Hetzner Cloud API token, not the CLI itself                                                           |
 | `kubectl`                                              | talking to the cluster once it exists                                                  |                                                                                                         |

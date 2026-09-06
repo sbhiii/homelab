@@ -2,20 +2,25 @@
 
 # Architecture
 
-## Three Terraform modules, not one
+## Four Terraform modules, not one
 
 ```
 iac/
-  bootstrap/   state bucket only. Local state, on purpose. Applied once, ever.
-  aws/         OIDC provider, IAM role, discovery documents, DNS records
-  hetzner/     the cluster itself: network, firewall, server, signing key
+  bootstrap/             state bucket only. Local state, on purpose. Applied once, ever.
+  aws-shared-services/   OIDC provider, cert-manager role, discovery documents, DNS records
+  aws-homelab/           OIDC provider, External Secrets role, SSM read policy
+  hetzner/               the cluster itself: network, firewall, server, signing key
 ```
 
 `iac/hetzner` recreates its server on almost every meaningful change, because the node's `user_data` is immutable on Hetzner — there is no in-place update, only replace. If IAM and DNS lived in the same state as the node, every rebuild would put unrelated cloud resources in the same blast radius for no reason. Splitting them means a node rebuild touches exactly the node.
 
-`iac/bootstrap` is the odd one out: it creates the S3 bucket that the other two modules use as their _own_ backend, so it cannot store its state inside a bucket that doesn't exist yet. It keeps local state permanently, by design — see [`iac/bootstrap/README.md`](../iac/bootstrap/README.md).
+The two AWS modules are split by **account**, not by provider. `iac/aws-shared-services` holds what several consumers share: the hosted zone's records and the role `cert-manager` assumes to write them. `iac/aws-homelab` holds what belongs to this workload alone: the parameters External Secrets reads and the role that reads them. Each registers its own `aws_iam_openid_connect_provider`, because that resource is account-scoped — the issuer, its signing key and its discovery documents stay single-instanced and unchanged. Only the pointer is duplicated.
 
-Apply order is always **`hetzner` → `aws`**, never the reverse. `iac/aws-shared-services` reads two things out of `iac/hetzner`'s state via `terraform_remote_state`:
+`iac/aws-homelab` keeps its state in the same bucket as the others but authenticates differently: the backend uses an explicit `profile` for the bucket's owner while the provider targets the workload account. Drive it with `AWS_PROFILE=sbhi-homelab`, not the `export-credentials` pattern the other modules use — environment credentials override the backend profile.
+
+`iac/bootstrap` is the odd one out: it creates the S3 bucket the other modules use as their _own_ backend, so it cannot store its state inside a bucket that doesn't exist yet. It keeps local state permanently, by design — see [`iac/bootstrap/README.md`](../iac/bootstrap/README.md).
+
+Apply order is always **`hetzner` → `aws-shared-services`**, never the reverse. `iac/aws-homelab` sits outside that dependency: it reads nothing from `iac/hetzner` and can be applied at any point. `iac/aws-shared-services` reads two things out of `iac/hetzner`'s state via `terraform_remote_state`:
 
 - `sa_public_key_pem` — the public half of the signing key, used to build the JWKS.
 - `nodes_public_ips` — the node's current IP, used for the wildcard DNS record in [`iac/aws-shared-services/apps_dns.tf`](../iac/aws-shared-services/apps_dns.tf).
@@ -50,7 +55,7 @@ flowchart TD
 Concretely, [`iac/hetzner/scripts/init-cluster.sh.tftpl`](../iac/hetzner/scripts/init-cluster.sh.tftpl) does five things at first boot:
 
 1. Applies a couple of sysctl tweaks k3s wants (`fs.inotify.max_user_instances`).
-2. Writes three Terraform-rendered manifests into k3s's auto-apply directory, prefixed `01-`, `02-`, `03-` — k3s applies that directory alphabetically, which is the entire ordering mechanism. They are: the ArgoCD `HelmChart`, a `Secret` holding the gitops repo credentials, and the `root-app` `Application` that makes ArgoCD self-managing from that point on.
+2. Writes two Terraform-rendered manifests into k3s's auto-apply directory, prefixed `01-` and `03-` — k3s applies that directory alphabetically, which is the entire ordering mechanism. They are the ArgoCD `HelmChart` and the `root-app` `Application` that makes ArgoCD self-managing from that point on. `02-` was a `Secret` holding a GitHub token; the gitops repository is public and ArgoCD only reads it, so no credential is needed and the gap in the numbering is deliberate.
 3. Writes the ServiceAccount signing keypair to `/etc/k3s-oidc/` (`0600` on the private half).
 4. Installs k3s itself, with `--disable traefik --disable servicelb` (both are reprovided through GitOps instead) and four `--kube-apiserver-arg` flags that turn on OIDC federation — see below.
 5. Installs a `systemd` unit blocking pod traffic to Hetzner's metadata service — see [Security model](security.md).
