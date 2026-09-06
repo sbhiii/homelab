@@ -13,24 +13,24 @@ iac/
 
 `iac/hetzner` recreates its server on almost every meaningful change, because the node's `user_data` is immutable on Hetzner — there is no in-place update, only replace. If IAM and DNS lived in the same state as the node, every rebuild would put unrelated cloud resources in the same blast radius for no reason. Splitting them means a node rebuild touches exactly the node.
 
-`iac/bootstrap` is the odd one out: it creates the S3 bucket that the other two modules use as their *own* backend, so it cannot store its state inside a bucket that doesn't exist yet. It keeps local state permanently, by design — see [`iac/bootstrap/README.md`](../iac/bootstrap/README.md).
+`iac/bootstrap` is the odd one out: it creates the S3 bucket that the other two modules use as their _own_ backend, so it cannot store its state inside a bucket that doesn't exist yet. It keeps local state permanently, by design — see [`iac/bootstrap/README.md`](../iac/bootstrap/README.md).
 
-Apply order is always **`hetzner` → `aws`**, never the reverse. `iac/aws` reads two things out of `iac/hetzner`'s state via `terraform_remote_state`:
+Apply order is always **`hetzner` → `aws`**, never the reverse. `iac/aws-shared-services` reads two things out of `iac/hetzner`'s state via `terraform_remote_state`:
 
 - `sa_public_key_pem` — the public half of the signing key, used to build the JWKS.
-- `nodes_public_ips` — the node's current IP, used for the wildcard DNS record in [`iac/aws/apps_dns.tf`](../iac/aws/apps_dns.tf).
+- `nodes_public_ips` — the node's current IP, used for the wildcard DNS record in [`iac/aws-shared-services/apps_dns.tf`](../iac/aws-shared-services/apps_dns.tf).
 
-Only the *public* key ever crosses that boundary. The private half stays inside `iac/hetzner`'s state and is never exported as an output.
+Only the _public_ key ever crosses that boundary. The private half stays inside `iac/hetzner`'s state and is never exported as an output.
 
 ## The zone belongs to a different repository
 
-`iac/aws` writes records into a hosted zone it does not create. The zone is defined in [`sbhi-aws-landing-zone`](https://github.com/sbhiii/sbhi-aws-landing-zone), which also owns the AWS account all of this applies into.
+`iac/aws-shared-services` writes records into a hosted zone it does not create. The zone is defined in [`sbhi-aws-landing-zone`](https://github.com/sbhiii/sbhi-aws-landing-zone), which also owns the AWS account all of this applies into.
 
 The line falls where it does because destroying the zone is not recoverable by an apply: a replacement gets a new delegation set, so the NS records have to be corrected by hand at the external DNS provider. Anything whose destruction forces a manual edit outside AWS outlives this cluster and is not the cluster's to manage. Everything else here is derived from the signing key or points at the node's current address, so it is recreated whenever the cluster is, and a node rebuild must not require an apply in the landing zone. That rule is recorded as decision 14 there.
 
-The contract between the two repositories is the zone's *name*, resolved with a `data "aws_route53_zone"` lookup rather than another `terraform_remote_state` read. A name is stable; a state file is an implementation detail, and sharing one would let a failed apply in either repository block the other.
+The contract between the two repositories is the zone's _name_, resolved with a `data "aws_route53_zone"` lookup rather than another `terraform_remote_state` read. A name is stable; a state file is an implementation detail, and sharing one would let a failed apply in either repository block the other.
 
-The practical consequence when bootstrapping: the zone and its delegation must already exist, or `iac/aws` fails at plan time. See [Getting started](getting-started.md#prerequisites).
+The practical consequence when bootstrapping: the zone and its delegation must already exist, or `iac/aws-shared-services` fails at plan time. See [Getting started](getting-started.md#prerequisites).
 
 ## The bootstrap chain
 
@@ -63,7 +63,7 @@ Everything after step 2 is GitOps: `root-app` is an app-of-apps, so every file u
 flowchart TD
     K["tls_private_key (iac/hetzner)\nlives in Terraform state"]
     K -->|cloud-init| N["/etc/k3s-oidc/sa.key on the node\nk3s --service-account-signing-key-file"]
-    K -->|public_key_pem, via remote state| J["pem_to_jwk.py derives kid/n/e\n(iac/aws/discovery.tf)"]
+    K -->|public_key_pem, via remote state| J["pem_to_jwk.py derives kid/n/e\n(iac/aws-shared-services/discovery.tf)"]
     J --> S["private S3 bucket"]
     S -->|Origin Access Control| C["CloudFront\nhttps://oidc.homelab.sbhi.io"]
     C -->|fetched anonymously| P["aws_iam_openid_connect_provider"]
@@ -73,14 +73,14 @@ flowchart TD
     R -->|temporary credentials| D["Route53 DNS-01 challenge"]
 ```
 
-The property this whole design is built around: **the signing key lives in Terraform state, not on the node.** A `user_data` change replaces the Hetzner server, but leaves the `tls_private_key` resource in [`iac/hetzner/keys.tf`](../iac/hetzner/keys.tf) completely untouched. The published JWKS, the IAM provider, and the trust policy all stay valid across a node rebuild — only a full `terraform destroy` of the `hetzner` module mints a new identity, and that requires re-applying `iac/aws` afterward to republish the new key.
+The property this whole design is built around: **the signing key lives in Terraform state, not on the node.** A `user_data` change replaces the Hetzner server, but leaves the `tls_private_key` resource in [`iac/hetzner/keys.tf`](../iac/hetzner/keys.tf) completely untouched. The published JWKS, the IAM provider, and the trust policy all stay valid across a node rebuild — only a full `terraform destroy` of the `hetzner` module mints a new identity, and that requires re-applying `iac/aws-shared-services` afterward to republish the new key.
 
 A few details that took real iteration to get right, and are worth knowing before touching this code:
 
-- **The `kid` must byte-match exactly.** Kubernetes computes a token's `kid` header as `base64url(sha256(DER-encoded PKIX public key))`. [`iac/aws/scripts/pem_to_jwk.py`](../iac/aws/scripts/pem_to_jwk.py) reimplements that from scratch in pure Python (no `cryptography` dependency, so it runs anywhere Terraform does) via a hand-rolled DER/TLV parser. [`test_pem_to_jwk.py`](../iac/aws/scripts/test_pem_to_jwk.py) pins it against a fixture cross-verified with `openssl`. This was independently verified against the live cluster's own JWKS output and matched exactly — see the git history for `iac/aws/discovery.tf` if you want the receipts.
+- **The `kid` must byte-match exactly.** Kubernetes computes a token's `kid` header as `base64url(sha256(DER-encoded PKIX public key))`. [`iac/aws-shared-services/scripts/pem_to_jwk.py`](../iac/aws-shared-services/scripts/pem_to_jwk.py) reimplements that from scratch in pure Python (no `cryptography` dependency, so it runs anywhere Terraform does) via a hand-rolled DER/TLV parser. [`test_pem_to_jwk.py`](../iac/aws-shared-services/scripts/test_pem_to_jwk.py) pins it against a fixture cross-verified with `openssl`. This was independently verified against the live cluster's own JWKS output and matched exactly — see the git history for `iac/aws-shared-services/discovery.tf` if you want the receipts.
 - **`cache_control` on the discovery objects is load-bearing, not decoration.** CloudFront's managed `CachingOptimized` policy defaults to a 24-hour TTL. Without an explicit override, rotating the signing key would leave AWS reading a stale JWKS and rejecting every token with an opaque error for up to a day. It's capped at five minutes instead.
-- **The trust policy carries two conditions, not one.** `${issuer_host}:sub` pins the exact ServiceAccount; `${issuer_host}:aud` pins the audience to `sts.amazonaws.com`. Dropping the `aud` condition is the single most common IRSA misconfiguration in the wild — it lets a token minted for *any* audience assume the role.
-- **`route53:ListHostedZonesByName` is deliberately absent from the IAM policy.** The gitops repo's `ClusterIssuer` sets `hostedZoneID` explicitly, which skips the lookup that permission would otherwise be needed for. The policy is two actions on one zone; see [`iac/aws/iam.tf`](../iac/aws/iam.tf). It was granted briefly, to keep the zone ID out of the gitops repository, and reverted: the permission takes no resource-level conditions, so it cannot be scoped to one zone, and trading a genuinely narrower policy for the concealment of an identifier AWS does not treat as secret was the wrong way round.
+- **The trust policy carries two conditions, not one.** `${issuer_host}:sub` pins the exact ServiceAccount; `${issuer_host}:aud` pins the audience to `sts.amazonaws.com`. Dropping the `aud` condition is the single most common IRSA misconfiguration in the wild — it lets a token minted for _any_ audience assume the role.
+- **`route53:ListHostedZonesByName` is deliberately absent from the IAM policy.** The gitops repo's `ClusterIssuer` sets `hostedZoneID` explicitly, which skips the lookup that permission would otherwise be needed for. The policy is two actions on one zone; see [`iac/aws-shared-services/iam.tf`](../iac/aws-shared-services/iam.tf). It was granted briefly, to keep the zone ID out of the gitops repository, and reverted: the permission takes no resource-level conditions, so it cannot be scoped to one zone, and trading a genuinely narrower policy for the concealment of an identifier AWS does not treat as secret was the wrong way round.
 
 ## Why not EKS, IAM Roles Anywhere, or SPIFFE
 

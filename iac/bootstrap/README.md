@@ -1,6 +1,6 @@
 # bootstrap
 
-Creates the S3 bucket that `iac/aws` and `iac/hetzner` store their terraform
+Creates the S3 bucket that `iac/aws-shared-services` and `iac/hetzner` store their terraform
 state in.
 
 This module keeps **local state on purpose**. It cannot store its state in the
