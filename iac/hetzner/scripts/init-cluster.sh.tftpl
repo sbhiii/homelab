@@ -63,9 +63,9 @@ curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
 # 5. Deny pods access to the metadata service
 #
 # Hetzner serves user_data unauthenticated on 169.254.169.254, and that user_data
-# carries both the ServiceAccount token-signing key and the GitHub PAT. Without
-# this rule any pod can read them, forge a token for any ServiceAccount, and push
-# to the gitops repository.
+# carries the ServiceAccount token-signing key. Without this rule any pod can read
+# it and forge a token for any ServiceAccount, including one the AWS trust policy
+# accepts.
 #
 # The FORWARD chain only sees traffic *transiting* the node, which is precisely
 # pod traffic. The node itself goes through OUTPUT and keeps its access - it needs

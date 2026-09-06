@@ -30,7 +30,7 @@ Both halves in the same shell invocation — the exported variables don't persis
 - **A Hetzner Cloud project**, with an API token and an SSH key already uploaded to it. The SSH key must exist under a name that matches `data "hcloud_ssh_key" "samy_ssh"` in [`iac/hetzner/main.tf`](../iac/hetzner/main.tf) — either rename your key to `samy-macbook-pro-ssh` or edit that data source to look up your own.
 - **An AWS account.** IAM permissions to create S3 buckets, CloudFront distributions, ACM certificates, and IAM OIDC providers/roles. This deployment applies into a member account of an AWS Organization, authenticating through IAM Identity Center rather than an IAM user, so no long-lived AWS credential exists for these stacks.
 - **A delegated subdomain, with its hosted zone already created.** This repository does not create the zone. It looks one up by name and writes records into it, so the zone and its NS delegation must both exist first. They belong to whatever owns your DNS structure, which for this deployment is [`sbhi-aws-landing-zone`](https://github.com/sbhiii/sbhi-aws-landing-zone); the reasoning is recorded there as decision 14. Terraform cannot perform the delegation itself, so that remains the one genuinely manual step, it just happens before this walkthrough rather than inside it.
-- **A GitHub repository forked from [`homelab-gitops`](https://github.com/sbhiii/homelab-gitops)**, plus a token ArgoCD can use to read it — classic PAT with `repo` scope, or a fine-grained PAT scoped to that repository with `Contents: Read`.
+- **A public GitHub repository forked from [`homelab-gitops`](https://github.com/sbhiii/homelab-gitops)**. ArgoCD reads it anonymously, so it must be public.
 
 ### Background knowledge
 
