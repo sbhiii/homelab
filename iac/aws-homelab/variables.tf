@@ -29,7 +29,7 @@ variable "external_secrets_namespace" {
 variable "external_secrets_service_account" {
   description = "ServiceAccount external-secrets runs as."
   type        = string
-  default     = "external-secrets"
+  default     = "external-secrets-ssm"
 }
 
 locals {
