@@ -4,11 +4,6 @@
 # Hetzner Cloud API token, read and write.
 hcloud_token = "REPLACE_ME"
 
-# GitHub Personal Access Token, scope: repo. Rendered into cloud-init so
-# ArgoCD can clone the gitops repository, which puts it in the node's
-# user_data. See docs/security.md.
-github_token = "REPLACE_ME"
-
 project_code = "example"
 environment  = "prod"
 

@@ -66,24 +66,11 @@ variable "nodes" {
   }))
 }
 
-# k3s Cluster configuration
-variable "github_token" {
-  description = "GitHub Personal Access Token (scope: repo)"
-  type        = string
-  sensitive   = true
-}
-
 variable "github_repo_url" {
   description = "HTTPS URL of the gitops repo."
   type        = string
   default     = "https://github.com/sbhiii/homelab-gitops.git"
 }
-
-# variable "realdebrid_api_key" {
-#   description = "RealDebrid API token"
-#   type        = string
-#   sensitive   = true
-# }
 
 # Must match local.issuer_url in the aws stack exactly. Neither stack can catch a
 # mismatch: the API server stamps this into every token's iss claim, and AWS only
